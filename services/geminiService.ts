@@ -7,26 +7,20 @@ function getAiClient() {
 }
 
 export const SUPPORTED_MODELS = [
-  { id: 'creative', name: 'Creative Engine', color: 'bg-green-500' },
-  { id: 'reasoning', name: 'Reasoning Engine', color: 'bg-blue-600' },
+  { id: 'creative', name: 'The Bard', color: 'bg-emerald-600' },
+  { id: 'reasoning', name: 'The Scholar', color: 'bg-blue-700' },
 ];
 
 const MODEL_PERSONAS: Record<string, string> = {
-  'creative': "You are the Creative Engine. You are fast, witty, and conversational. Keep answers concise (<50 words if possible) to ensure speed.",
-  'reasoning': "You are the Reasoning Engine. You provide logic. Be extremely direct and efficient.",
+  'creative': "You are 'The Bard'. You are poetic, witty, and adventurous. You speak with a slight flair of old-world charm but keep it concise.",
+  'reasoning': "You are 'The Scholar'. You are logical, precise, and wise. You provide facts and structure like an ancient librarian.",
 };
 
-/**
- * Helper to determine if the user wants to generate an image or just text.
- */
 async function detectIntent(prompt: string, hasMedia: boolean): Promise<'TEXT' | 'IMAGE'> {
   const p = prompt.toLowerCase();
-  
-  // 1. Keyword Optimization (Efficiency)
-  const imageKeywords = ['image', 'photo', 'picture', 'draw', 'sketch', 'paint', 'render', 'illustration', 'cartoon', 'visualize', 'logo'];
+  const imageKeywords = ['image', 'photo', 'picture', 'draw', 'sketch', 'paint', 'render', 'illustration', 'cartoon', 'visualize', 'logo', 'portrait', 'canvas'];
   if (imageKeywords.some(k => p.includes(k))) return 'IMAGE';
 
-  // 2. Fast AI Fallback
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -51,7 +45,7 @@ export async function generateSpeech(text: string): Promise<string | undefined> 
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' },
+            prebuiltVoiceConfig: { voiceName: 'Fenrir' }, // Deeper voice for adventure
           },
         },
       },
@@ -66,101 +60,83 @@ async function generateImage(prompt: string, config: GenerationConfig, inputImag
   try {
     const ai = getAiClient();
     const parts: any[] = [];
-    
     if (inputImage && inputImage.mimeType.startsWith('image/')) {
-      parts.push({
-        inlineData: {
-          mimeType: inputImage.mimeType,
-          data: inputImage.data
-        }
-      });
+      parts.push({ inlineData: { mimeType: inputImage.mimeType, data: inputImage.data } });
     }
-    
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image', 
       contents: { parts },
-      config: {
-        imageConfig: {
-          aspectRatio: config.aspectRatio
-        }
-      }
+      config: { imageConfig: { aspectRatio: config.aspectRatio } }
     });
 
     let textResponse = "";
     let generatedImage: Attachment | undefined;
-
     const contentParts = response.candidates?.[0]?.content?.parts;
     
     if (contentParts) {
       for (const part of contentParts) {
-        if (part.text) {
-          textResponse += part.text;
-        }
+        if (part.text) textResponse += part.text;
         if (part.inlineData) {
-          generatedImage = {
-            mimeType: part.inlineData.mimeType || 'image/png',
-            data: part.inlineData.data
-          };
+          generatedImage = { mimeType: part.inlineData.mimeType || 'image/png', data: part.inlineData.data };
         }
       }
     }
 
-    if (!generatedImage) {
-        return { text: "Visual generation failed. Please try again." };
-    }
-
-    return {
-      text: textResponse || "Visual content generated.",
-      attachment: generatedImage
-    };
-
+    if (!generatedImage) return { text: "The canvas remains blank. Let us try again." };
+    return { text: textResponse || "A vision has been captured.", attachment: generatedImage };
   } catch (error) {
     console.error("Image generation error:", error);
-    return { text: "Error generating image." };
+    return { text: "The spirits of art are quiet today. Error generating image." };
   }
+}
+
+async function handleResearchRequest(userPrompt: string): Promise<string> {
+    const ai = getAiClient();
+    
+    // We use Google Search Grounding to get real-time info
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: userPrompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        }
+    });
+
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    let finalText = response.text || "Research complete.";
+
+    if (groundingChunks && groundingChunks.length > 0) {
+        finalText += "\n\n**Scrolls of Knowledge:**\n";
+        groundingChunks.forEach((chunk: any) => {
+            if (chunk.web?.uri) {
+                finalText += `- [${chunk.web.title || 'Unknown Tome'}](${chunk.web.uri})\n`;
+            }
+        });
+    }
+    
+    return finalText;
 }
 
 async function querySingleModel(modelId: string, userPrompt: string, media?: Attachment): Promise<{ id: string, response: string }> {
   try {
     const ai = getAiClient();
-    const persona = MODEL_PERSONAS[modelId];
-    
     const parts: any[] = [];
     if (media) {
-      parts.push({
-        inlineData: {
-          mimeType: media.mimeType,
-          data: media.data
-        }
-      });
-      parts.push({ text: userPrompt });
-    } else {
-      parts.push({ text: userPrompt });
+      parts.push({ inlineData: { mimeType: media.mimeType, data: media.data } });
     }
-
-    // USE FLASH FOR EVERYTHING TO HIT <2s TARGET
-    const modelName = 'gemini-2.5-flash'; 
+    parts.push({ text: userPrompt });
 
     const response = await ai.models.generateContent({
-      model: modelName,
+      model: 'gemini-2.5-flash',
       contents: { parts },
-      config: {
-        systemInstruction: persona,
-        temperature: 0.7,
-      }
+      config: { systemInstruction: MODEL_PERSONAS[modelId], temperature: 0.7 }
     });
 
-    return {
-      id: modelId,
-      response: response.text || ""
-    };
+    return { id: modelId, response: response.text || "" };
   } catch (error) {
-    return {
-      id: modelId,
-      response: ""
-    };
+    return { id: modelId, response: "" };
   }
 }
 
@@ -169,30 +145,27 @@ async function synthesizeResponses(userPrompt: string, modelResponses: { id: str
   const aggregatedContext = modelResponses.map(m => `[${m.id.toUpperCase()}]: ${m.response}`).join('\n');
 
   const synthesisPrompt = `
-You are AZ AI. User Query: "${userPrompt}"
-Context:
+You are AZ AI, The Grand Archivist. User Query: "${userPrompt}"
+Context from your advisors (Bard & Scholar):
 ${aggregatedContext}
 
 Task: Synthesize a single response.
 Rules:
-1. Be extremely concise. Target < 2 seconds latency.
-2. If the user provided code, or asked for code, output it in a standard markdown code block so the compiler can run it.
-3. Combine the wit of Creative and logic of Reasoning.
-4. No preamble.
+1. Be concise but elegant.
+2. If code is requested, provide it in a markdown block.
+3. Combine the wit of the Bard and wisdom of the Scholar.
+4. Speak with authority and grace.
 `;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash', 
       contents: synthesisPrompt,
-      config: {
-        temperature: 0.5, 
-      }
+      config: { temperature: 0.5 }
     });
-    
-    return response.text || "Response synthesis failed.";
+    return response.text || "The archives are silent.";
   } catch (error) {
-    return "Error synthesizing response.";
+    return "The connection to the archives has been severed.";
   }
 }
 
@@ -202,23 +175,17 @@ async function handleGameRequest(gameType: string, userPrompt: string): Promise<
    let prompt = userPrompt;
 
    if (gameType === "20_questions") {
-     systemInstruction = "You are playing 20 Questions. You are the host. Pick a secret object if starting, otherwise answer the user's question with Yes/No/Maybe and track the count.";
-     if (!userPrompt) prompt = "Start a new game of 20 questions. Pick a secret object and give me a hint.";
+     systemInstruction = "You are the Sphinx of Riddles. Play 20 Questions. Be mysterious yet fair.";
+     if (!userPrompt) prompt = "Start a new game of 20 questions. Pick a secret object and give me a cryptic hint.";
    } else if (gameType === "rpg") {
-     systemInstruction = "You are an AI Dungeon Master. Lead the user on a short, thrilling adventure. Keep descriptions vivid but concise (2-3 sentences). Offer 2 choices at the end.";
-     if (!userPrompt) prompt = "Start a new sci-fi adventure.";
+     systemInstruction = "You are the Dungeon Master. Lead the user on a perilous fantasy adventure. Vivid descriptions, high stakes. Offer 2 choices.";
+     if (!userPrompt) prompt = "Start a new fantasy adventure in a forgotten kingdom.";
    } else if (gameType === "trivia") {
-     systemInstruction = "You are a Trivia Host. Ask a difficult but fun question about technology or space. Wait for the user to answer, then grade them.";
-     if (!userPrompt) prompt = "Give me a trivia question.";
+     systemInstruction = "You are the Quiz Master. Ask difficult questions about history, science, or myth. Grade the answers sternly but fairly.";
+     if (!userPrompt) prompt = "Challenge me with a trivia question.";
    } else if (gameType === "custom_maker") {
-     systemInstruction = `You are the Universal Game Engine. 
-     The user will define a custom game concept.
-     YOUR RULES:
-     1. Acknowledge the user's game rules.
-     2. If the user specifies the number of players, explicitly manage turns.
-     3. IMMEDIATELY start the first turn of the game.
-     4. Be enthusiastic, immersive, and use emojis!`;
-     prompt = `User's Game Design: "${userPrompt}". Initialize this game now.`;
+     systemInstruction = `You are the Game Architect. The user will define the rules. Follow them precisely but add flavor text.`;
+     prompt = `User's Design: "${userPrompt}". Begin.`;
    }
 
    const response = await ai.models.generateContent({
@@ -226,22 +193,19 @@ async function handleGameRequest(gameType: string, userPrompt: string): Promise<
       contents: prompt,
       config: { systemInstruction }
    });
-   return response.text || "Game error.";
+   return response.text || "The game cannot begin.";
 }
 
-/**
- * Handle Compiler/Code Requests
- */
 async function handleCompilerRequest(userPrompt: string): Promise<string> {
     const ai = getAiClient();
-    const systemInstruction = `You are AZ AI Compiler. 
-    Your goal is to be a helpful Senior Software Engineer and Interpreter.
+    const systemInstruction = `You are the Royal Engineer. 
+    Your goal is to build perfect structures (code).
     
     Rules:
-    1. If the user provides code, ANALYZE it for errors and output the CORRECTED, RUNNABLE version in a markdown block.
+    1. If the user provides code, fix it and present the pristine version.
     2. If the user asks for code, generate efficient, clean code in a markdown block.
-    3. Always prioritize JavaScript (for logic) or HTML/CSS (for UI) as these can be run in the app's built-in compiler.
-    4. Keep explanations brief. Focus on the code.
+    3. Prioritize JavaScript/HTML/CSS.
+    4. Keep explanations brief.
     `;
 
     const response = await ai.models.generateContent({
@@ -249,7 +213,7 @@ async function handleCompilerRequest(userPrompt: string): Promise<string> {
         contents: userPrompt,
         config: { systemInstruction }
     });
-    return response.text || "Compilation failed.";
+    return response.text || "The blueprint is flawed.";
 }
 
 export const generateAzAiResponse = async (
@@ -257,23 +221,30 @@ export const generateAzAiResponse = async (
   media: Attachment | undefined,
   config: GenerationConfig,
   onStatusUpdate: (modelId: string, status: 'querying' | 'complete') => void,
-  onModeChange?: (mode: 'text' | 'image' | 'game' | 'code') => void,
-  forcedMode?: 'text' | 'image' | 'game' | 'code',
+  onModeChange?: (mode: 'chat' | 'image' | 'game' | 'code' | 'research') => void,
+  forcedMode?: 'chat' | 'image' | 'game' | 'code' | 'research',
   gameType?: string
 ): Promise<{ text: string, attachment?: Attachment, modelName?: string }> => {
   
+  // Research Mode
+  if (forcedMode === 'research') {
+     if (onModeChange) onModeChange('research');
+     const text = await handleResearchRequest(prompt);
+     return { text, modelName: "The Oracle 🌐" };
+  }
+
   // Code/Compiler Mode
   if (forcedMode === 'code') {
      if (onModeChange) onModeChange('code');
      const text = await handleCompilerRequest(prompt);
-     return { text, modelName: "AZ Compiler 🛠️" };
+     return { text, modelName: "Royal Engineer 🛠️" };
   }
 
   // Game Mode
   if (forcedMode === 'game' && gameType) {
     if (onModeChange) onModeChange('game');
     const text = await handleGameRequest(gameType, prompt);
-    return { text, modelName: "AZ Game Engine 🎮" };
+    return { text, modelName: "Dungeon Master 🎲" };
   }
 
   // Image Check
@@ -282,11 +253,11 @@ export const generateAzAiResponse = async (
   if (intent === 'IMAGE') {
     if (onModeChange) onModeChange('image');
     const result = await generateImage(prompt, config, media);
-    return { ...result, modelName: "Visual Studio 🎨" };
+    return { ...result, modelName: "Court Painter 🎨" };
   }
 
   // Text Mode (Fast Path)
-  if (onModeChange) onModeChange('text');
+  if (onModeChange) onModeChange('chat');
 
   const promiseList = SUPPORTED_MODELS.map(async (model) => {
     onStatusUpdate(model.id, 'querying');
@@ -298,5 +269,5 @@ export const generateAzAiResponse = async (
   const results = await Promise.all(promiseList);
   const finalText = await synthesizeResponses(prompt, results, !!media);
   
-  return { text: finalText, modelName: "AZ AI ⚡" };
+  return { text: finalText, modelName: "Grand Archivist 📜" };
 };

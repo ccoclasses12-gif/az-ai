@@ -1,198 +1,133 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AZ AI</title>
+    <title>AZ AI - The Guild</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
       body {
-        font-family: 'Inter', sans-serif;
-        background-color: #0f172a; /* Slate 900 */
-        color: #f8fafc; /* Slate 50 */
+        font-family: 'Crimson Pro', serif;
+        background-color: #1a1510; /* Dark Wood/Leather */
+        color: #e5e5e5;
         cursor: default;
         overflow-x: hidden;
       }
       
-      /* Font for Tech/Robot UI */
-      .font-tech {
-        font-family: 'Rajdhani', sans-serif;
+      /* Font for Headings/Epic UI */
+      .font-epic {
+        font-family: 'Cinzel', serif;
       }
       
       .font-code {
         font-family: 'Fira Code', monospace;
       }
 
-      /* Custom Scrollbar - Neon Style */
+      /* Custom Scrollbar - Antiquated Gold */
       ::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #020617; 
+        background: #0f0c0a; 
       }
       ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #3b82f6, #a855f7); 
-        border-radius: 10px;
+        background: linear-gradient(180deg, #855e42, #d4af37); 
+        border-radius: 4px;
+        border: 1px solid #2d241e;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, #60a5fa, #c084fc); 
+        background: linear-gradient(180deg, #a67c52, #f3d267); 
       }
 
-      /* Global Click Sparkle */
+      /* Global Click Sparkle - Gold Dust */
       .click-sparkle {
         position: fixed;
-        width: 30px;
-        height: 30px;
-        background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(168,85,247,0.8) 40%, transparent 80%);
+        width: 20px;
+        height: 20px;
+        background: radial-gradient(circle, #ffd700 0%, transparent 70%);
         border-radius: 50%;
         pointer-events: none;
         transform: translate(-50%, -50%);
         z-index: 9999;
-        animation: sparkle-burst 0.5s ease-out forwards;
-        box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+        animation: dust-burst 0.6s ease-out forwards;
         mix-blend-mode: screen;
       }
-      @keyframes sparkle-burst {
+      @keyframes dust-burst {
         0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-        50% { opacity: 0.8; }
         100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
       }
 
-      /* STARFIELD ANIMATION */
-      .starfield {
+      /* AMBIENT PARTICLES (Dust Motes) */
+      .dust-field {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        perspective: 800px;
-        overflow: hidden;
-        z-index: 0;
         pointer-events: none;
+        z-index: 0;
+        opacity: 0.4;
       }
-      .star {
+      .mote {
         position: absolute;
         width: 2px;
         height: 2px;
-        background: white;
+        background: #d4af37;
         border-radius: 50%;
-        animation: star-fly 4s linear infinite;
+        animation: float-mote 10s infinite ease-in-out;
       }
-      @keyframes star-fly {
-        0% { transform: translateZ(-800px); opacity: 0; }
-        10% { opacity: 1; }
-        100% { transform: translateZ(200px); opacity: 0; }
+      @keyframes float-mote {
+        0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+        50% { opacity: 0.8; }
+        100% { transform: translateY(-50px) translateX(20px); opacity: 0; }
       }
 
-      /* CYBER GRID */
-      .cyber-grid {
+      /* COMPASS SPIN ANIMATION */
+      @keyframes compass-spin {
+        0% { transform: rotate(0deg); }
+        20% { transform: rotate(10deg); }
+        40% { transform: rotate(-5deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .compass-spin {
+        animation: compass-spin 10s infinite linear;
+      }
+
+      /* GLORIOUS TEXTURE OVERLAY */
+      .texture-overlay {
         position: fixed;
-        bottom: -50%;
-        left: -50%;
-        width: 200%;
-        height: 100%;
-        background-image: 
-          linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px);
-        background-size: 50px 50px;
-        transform: perspective(500px) rotateX(60deg);
-        animation: grid-move 5s linear infinite;
-        opacity: 0.2;
-        z-index: 0;
-        pointer-events: none;
-      }
-      @keyframes grid-move {
-        0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-        100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
-      }
-
-      /* WARP SPEED TRANSITION */
-      .warp-active .star {
-        width: 4px;
-        height: 100px; /* Stretch stars into lines */
-        animation-duration: 0.5s;
-        opacity: 0.8;
-      }
-      
-      /* Robot Floating & Breathing */
-      @keyframes robot-float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-15px); }
-      }
-      .robot-float {
-        animation: robot-float 4s ease-in-out infinite;
-      }
-
-      @keyframes eye-blink {
-        0%, 90%, 100% { transform: scaleY(1); }
-        95% { transform: scaleY(0.1); }
-      }
-      .robot-eye {
-        transform-origin: center;
-        animation: eye-blink 4s infinite;
-      }
-
-      /* Glitch Text Effect */
-      .glitch-text {
-        position: relative;
-      }
-      .glitch-text::before,
-      .glitch-text::after {
-        content: attr(data-text);
-        position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-      }
-      .glitch-text::before {
-        left: 2px;
-        text-shadow: -1px 0 #ff00c1;
-        clip: rect(44px, 450px, 56px, 0);
-        animation: glitch-anim 5s infinite linear alternate-reverse;
-      }
-      .glitch-text::after {
-        left: -2px;
-        text-shadow: -1px 0 #00fff9;
-        clip: rect(44px, 450px, 56px, 0);
-        animation: glitch-anim2 5s infinite linear alternate-reverse;
+        background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
+        opacity: 0.15;
+        pointer-events: none;
+        z-index: 1;
+        mix-blend-mode: overlay;
       }
 
-      @keyframes glitch-anim {
-        0% { clip: rect(12px, 9999px, 86px, 0); }
-        20% { clip: rect(82px, 9999px, 15px, 0); }
-        40% { clip: rect(12px, 9999px, 6px, 0); }
-        60% { clip: rect(34px, 9999px, 92px, 0); }
-        80% { clip: rect(65px, 9999px, 4px, 0); }
-        100% { clip: rect(54px, 9999px, 32px, 0); }
-      }
-      @keyframes glitch-anim2 {
-        0% { clip: rect(65px, 9999px, 92px, 0); }
-        20% { clip: rect(2px, 9999px, 15px, 0); }
-        40% { clip: rect(42px, 9999px, 62px, 0); }
-        60% { clip: rect(14px, 9999px, 32px, 0); }
-        80% { clip: rect(85px, 9999px, 4px, 0); }
-        100% { clip: rect(24px, 9999px, 72px, 0); }
-      }
-
+      /* Glorious Entrance */
       .glorious-entrance {
-        animation: gloriousFadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        animation: gloriousFadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
       @keyframes gloriousFadeIn {
-        0% { opacity: 0; transform: translateY(20px) scale(0.95); filter: blur(10px); }
+        0% { opacity: 0; transform: translateY(10px) scale(0.98); filter: blur(4px); }
         100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       }
-      @keyframes shimmer {
-        0% { background-position: -200% center; }
-        100% { background-position: 200% center; }
-      }
+      
       .shimmer-text {
-        background: linear-gradient(90deg, #60a5fa, #a855f7, #ec4899, #60a5fa);
+        background: linear-gradient(90deg, #d4af37, #fef08a, #d4af37);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: shimmer 4s linear infinite;
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
       }
     </style>
   <script type="importmap">

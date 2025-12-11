@@ -1,3 +1,4 @@
+
 export enum MessageRole {
   USER = 'user',
   ASSISTANT = 'assistant',
@@ -34,6 +35,9 @@ export interface AzAiConfig {
 export interface GenerationConfig {
   aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
 }
+
+// Updated ToolMode to remove 'video'
+export type ToolMode = 'chat' | 'image' | 'game' | 'code' | 'research';
 
 declare global {
   interface AIStudio {
